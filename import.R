@@ -260,6 +260,6 @@ proportion.nas <- proportion.nas %>% select(-suspect.dob_nas, -beat_nas, -office
 any(proportion.nas > 0.1)
 
 # remove irrevelant variables
-
+sqf.data <- sqf.data %>% select(-forceuse)
 
 write_csv(sqf.data, 'sqf_08_16.csv')
