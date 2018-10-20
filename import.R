@@ -255,8 +255,11 @@ sqf.data <- sqf.data %>% select(-crimsusp, -repcmd, -revcmd, -othfeatr, -addrtyp
 # check proportion of missing values
 proportion.nas <- sqf.data %>% group_by(year) %>% summarize_all(funs(nas = sum(is.na(.))/n()))
 # remove variables that can have more than 10% missing values
-check.proportion.nas <- proportion.nas %>% select(-suspect.dob_nas, -beat_nas, -officer.verbal_nas, -officer.shield_nas, -arrested.reason_nas)
+proportion.nas <- proportion.nas %>% select(-suspect.dob_nas, -beat_nas, -officer.verbal_nas, -officer.shield_nas, -arrested.reason_nas)
 # check if any variabbles has more than 10% missing values
-any(check.proportion.nas > 0.1)
+any(proportion.nas > 0.1)
 
-write_csv(sqf.data, 'sqf.csv')
+# remove irrevelant variables
+
+
+write_csv(sqf.data, 'sqf_08_16.csv')
