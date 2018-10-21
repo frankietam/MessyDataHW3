@@ -20,13 +20,13 @@ sqf_08_16.data <- sqf_08_16.data %>% mutate(suspect.race = as.factor(suspect.rac
 sqf_08_16.data <- sqf_08_16.data %>% filter(suspected.crime=='cpw') 
 
 # create training set
-train <- sqf_08_16.data %>% filter(year==2008)
+train.cpw.2008 <- sqf_08_16.data %>% filter(year==2008)
 
 # Part A
 ## I
 
 # standardize real-valued attributes for training set
-train <- train %>% mutate(suspect.age = standardize(suspect.age),
+train.cpw.2008 <- train.cpw.2008 %>% mutate(suspect.age = standardize(suspect.age),
                           suspect.height = standardize(suspect.height),
                           suspect.weight = standardize(suspect.weight),
                           observation.period = standardize(observation.period))
@@ -42,24 +42,55 @@ model <- glm(found.weapon ~ precinct + location.housing +
                stopped.bc.clothing + stopped.bc.drugs + stopped.bc.furtive + stopped.bc.violent + 
                stopped.bc.bulge + stopped.bc.other + suspect.age + suspect.build + suspect.sex +
                suspect.height + suspect.weight + inside + radio.run + observation.period +
-               day + month + time.period, data=train, family = 'binomial')
+               day + month + time.period, data=train.cpw.2008, family = 'binomial')
 
 # examine model
 summary(model)
 
 
 ## II
-## 6th precinct, 30 years old, 6 feet, 165 lb, medium build, 10/4/2018 8pm, no weapon, suspected of criminal possession of weapon, suspect bulge, high incidence of weapn offenses, observed 10 min, no radio call
-newdata <- data.frame(precinct='6', location.housing='transit', 
+# 6th precinct, 30 years old, 6 feet, 165 lb, medium build, 10/4/2018 8pm, no weapon, suspected of criminal possession of weapon, suspect bulge, high incidence of weapn offenses, observed 10 min, no radio call
+newdata.male <- data.frame(precinct='6', location.housing='transit', 
              additional.report = FALSE, additional.investigation = FALSE, additional.proximity = FALSE,
              additional.evasive = FALSE, additional.associating = FALSE, additional.direction = FALSE,
              additional.highcrime = TRUE, additional.time = FALSE, additional.sights = FALSE, additional.other = FALSE,
              stopped.bc.object = FALSE, stopped.bc.desc = FALSE, stopped.bc.casing = FALSE, stopped.bc.lookout = FALSE,
              stopped.bc.clothing = FALSE, stopped.bc.drugs = FALSE, stopped.bc.furtive = FALSE, stopped.bc.violent = FALSE, 
              stopped.bc.bulge = TRUE, stopped.bc.other = FALSE, 
-             suspect.age = standardize(30), suspect.build = 'medium', suspect.sex = 'male',
-             suspect.height =  standardize(6), suspect.weight = standardize(165), inside = TRUE, radio.run = FALSE, observation.period = standardize(10),
+             suspect.age = 30, suspect.build = 'medium', suspect.sex = 'male',
+             suspect.height =  6, suspect.weight = 165, inside = TRUE, radio.run = FALSE, observation.period = 10,
              day = 'Thursday' , month = 'October', time.period = '6')
 
-prob <- predict (model, newdata, type="response")
+prob.male <- predict (model, newdata = newdata.male, type="response")
+
+# everything is same above other it's a female
+newdata.female <- data.frame(precinct='6', location.housing='transit', 
+                           additional.report = FALSE, additional.investigation = FALSE, additional.proximity = FALSE,
+                           additional.evasive = FALSE, additional.associating = FALSE, additional.direction = FALSE,
+                           additional.highcrime = TRUE, additional.time = FALSE, additional.sights = FALSE, additional.other = FALSE,
+                           stopped.bc.object = FALSE, stopped.bc.desc = FALSE, stopped.bc.casing = FALSE, stopped.bc.lookout = FALSE,
+                           stopped.bc.clothing = FALSE, stopped.bc.drugs = FALSE, stopped.bc.furtive = FALSE, stopped.bc.violent = FALSE, 
+                           stopped.bc.bulge = TRUE, stopped.bc.other = FALSE, 
+                           suspect.age = 30, suspect.build = 'medium', suspect.sex = 'female',
+                           suspect.height =  6, suspect.weight = 165, inside = TRUE, radio.run = FALSE, observation.period = 10,
+                           day = 'Thursday' , month = 'October', time.period = '6')
+
+prob.female <- predict (model, newdata = newdata.female, type="response")
+
+## III
+
+# using data from 2009
+test.cpw.2009 <- sqf_08_16.data %>% filter(year==2009)
+
+# generate predictions for 2009 data
+test.cpw.2009$predicted.probability <- predict(model, newdata = test.cpw.2009, type='response') 
+
+# compute AUC 
+test.pred <- prediction(test.cpw.2009$predicted.probability, test.cpw.2009$found.weapon)
+test.perf <- performance(test.pred, "auc")
+cat('the auc score is ', 100*test.perf@y.values[[1]], "\n") 
+
+## IV
+
+# random sampling
 
