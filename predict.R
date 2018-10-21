@@ -48,3 +48,18 @@ model <- glm(found.weapon ~ precinct + location.housing +
 summary(model)
 
 
+## II
+## 6th precinct, 30 years old, 6 feet, 165 lb, medium build, 10/4/2018 8pm, no weapon, suspected of criminal possession of weapon, suspect bulge, high incidence of weapn offenses, observed 10 min, no radio call
+newdata <- data.frame(precinct='6', location.housing='transit', 
+             additional.report = FALSE, additional.investigation = FALSE, additional.proximity = FALSE,
+             additional.evasive = FALSE, additional.associating = FALSE, additional.direction = FALSE,
+             additional.highcrime = TRUE, additional.time = FALSE, additional.sights = FALSE, additional.other = FALSE,
+             stopped.bc.object = FALSE, stopped.bc.desc = FALSE, stopped.bc.casing = FALSE, stopped.bc.lookout = FALSE,
+             stopped.bc.clothing = FALSE, stopped.bc.drugs = FALSE, stopped.bc.furtive = FALSE, stopped.bc.violent = FALSE, 
+             stopped.bc.bulge = TRUE, stopped.bc.other = FALSE, 
+             suspect.age = standardize(30), suspect.build = 'medium', suspect.sex = 'male',
+             suspect.height =  standardize(6), suspect.weight = standardize(165), inside = TRUE, radio.run = FALSE, observation.period = standardize(10),
+             day = 'Thursday' , month = 'October', time.period = '6')
+
+prob <- predict (model, newdata, type="response")
+
