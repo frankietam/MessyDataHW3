@@ -189,7 +189,7 @@ sqf.data <- sqf.data %>% mutate(suspect.sex = recode.factor(sex, c('M', 'F'),
   select(-sex, -race)
 
 # age and DOB
-sqf.data <- sqf.data %>% mutate(suspect.age = age, 
+sqf.data <- sqf.data %>% mutate(suspect.age = as.integer(age), 
                                 suspect.age = replace(suspect.age, suspect.age > 100, NA),
                                 dob = sprintf("%08d", as.integer(dob)),
                                 suspect.dob = mdy(dob),
