@@ -80,13 +80,22 @@ recode.0S <- function(f) {
   f.new
 }
 
-# this function is for recoding the data in 2014
+# these functions are for recoding the data in 2014
 recode.1NA <- function(f) {
   #  f.new <- ifelse(f==1, "Y", ifelse(is.na(f), "N", f))
   f.new <- ifelse(is.na(f), "N", ifelse(f==1, "Y", f))
   f.new
 }
 
+recode.10 <- function(f) {
+  f.new <- ifelse(f==1, "Y", ifelse(f==0, "N", f))
+  f.new
+}
+
+recode.NA <- function(f) {
+  f.new <- ifelse(is.na(f), "N", f)
+  f.new
+}
 # convert offense codes to human-readable names
 offense.codes <- read.delim('offense-codes.tsv', header=FALSE, col.names=c('code','offense'))
 offense.codes$offense <- tolower(offense.codes$offense)

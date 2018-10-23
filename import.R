@@ -12,7 +12,7 @@ sqf.data.full <- foreach(year=2008:2016, .combine='rbind') %dopar% {
     filename <- paste0(year, '.csv')
   }
 
-  this.data <- read_csv(filename)
+  this.data <- read_csv(filename, col_types = cols(perobs = col_double()))
   
   # Rename the columns
   if (year %in% 2013:2016) {
@@ -25,7 +25,7 @@ sqf.data.full <- foreach(year=2008:2016, .combine='rbind') %dopar% {
   if("forceuse" %nin% colnames(this.data))
     this.data <- mutate(this.data, forceuse=NA)
   
-  # Special handling for 2014 data, record 1 and NA to Y and N
+  # Special handling for 2014 data, record 1 and NA to Y and N and 1 to Y and 0 to N
   if (year==2014){
     # physical force used variables
     for (i in which(colnames(this.data)=="pistol") : which(colnames(this.data)=="pf_other")) {
@@ -41,6 +41,14 @@ sqf.data.full <- foreach(year=2008:2016, .combine='rbind') %dopar% {
     for (i in which(colnames(this.data)=="rf_furt") : which(colnames(this.data)=="rf_bulg")) {
       this.data[[i]] <- recode.1NA(this.data[[i]])
     }
+    
+    # radio variable
+    i <- which(colnames(this.data)=="radio")
+    this.data[[i]] <- recode.10(this.data[[i]])
+    
+    # extra report variable
+    i <- which(colnames(this.data)=="adtlrept")
+    this.data[[i]] <- recode.NA(this.data[[i]])
   }
   
   this.data
@@ -251,15 +259,16 @@ sqf.data <- sqf.data %>% select(-crimsusp, -repcmd, -revcmd, -othfeatr, -addrtyp
                                 -rescode, -premtype, -premname, -addrnum, -stname,
                                 -stinter, -crossst, -aptnum, -state, -zip, -addrpct,
                                 -post, -serial)
+# remove irrevelant variables
+sqf.data <- sqf.data %>% select(-forceuse)
 
 # check proportion of missing values
 proportion.nas <- sqf.data %>% group_by(year) %>% summarize_all(funs(nas = sum(is.na(.))/n()))
 # remove variables that can have more than 10% missing values
 proportion.nas <- proportion.nas %>% select(-suspect.dob_nas, -beat_nas, -officer.verbal_nas, -officer.shield_nas, -arrested.reason_nas)
 # check if any variabbles has more than 10% missing values
+proportion.nas <- proportion.nas %>% select(-year)
 any(proportion.nas > 0.1)
 
-# remove irrevelant variables
-sqf.data <- sqf.data %>% select(-forceuse)
-
+# write csv file
 write_csv(sqf.data, 'sqf_08_16.csv')
