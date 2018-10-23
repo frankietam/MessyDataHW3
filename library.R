@@ -143,3 +143,8 @@ standardize <- function(x) {
 x.std <- (x - mean(x, na.rm = TRUE))/sd(x, na.rm = TRUE)
 x.std
 }
+
+standardize.single <- function(x, y) {
+  x.std <- (x - mean(y, na.rm = TRUE))/sd(y, na.rm = TRUE)
+  x.std
+}
