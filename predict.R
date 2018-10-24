@@ -6,24 +6,40 @@ source('library.R')
 # import data
 sqf_08_16.data <- read_csv('sqf_08_16.csv')
 
-# Convert variable types as necessary
-sqf_08_16.data <- sqf_08_16.data %>% mutate(suspect.race = as.factor(suspect.race), 
-                                            suspect.build = as.factor(suspect.build),
-                                            suspect.sex = as.factor(suspect.sex),
-                                            location.housing = as.factor(location.housing),
-                                            day = as.factor(day),
-                                            month = as.factor(month),
-                                            time.period = as.factor(time.period),
-                                            precinct = as.factor(precinct))
-
 # restrict to CPW stops
-sqf_08_16.data <- sqf_08_16.data %>% filter(suspected.crime=='cpw') 
+sqf.cpw <- sqf_08_16.data %>% filter(suspected.crime=='cpw') 
 
-# create training set
-train.cpw.2008 <- sqf_08_16.data %>% filter(year==2008)
+sqf.cpw <- sqf.cpw %>%
+  select(id, year, found.weapon, found.gun, arrested, searched, suspect.race, suspect.age,
+         suspect.build, suspect.sex, suspect.height, suspect.weight,
+         stopped.bc.desc, stopped.bc.violent, stopped.bc.other, stopped.bc.object, 
+         stopped.bc.casing, stopped.bc.lookout, stopped.bc.drugs, stopped.bc.clothing, 
+         stopped.bc.furtive, stopped.bc.bulge, 
+         precinct, inside, location.housing, observation.period, officer.uniform,
+         additional.report, additional.investigation, additional.proximity, additional.evasive,
+         additional.associating, additional.direction, additional.highcrime, additional.time, 
+         additional.sights, additional.other, radio.run, day, month, time.period)
+
+
+# Convert variable types as necessary
+sqf.cpw <- sqf.cpw %>% mutate(suspect.race = as.factor(suspect.race), 
+                                      suspect.build = as.factor(suspect.build),
+                                      suspect.sex = as.factor(suspect.sex),
+                                      location.housing = as.factor(location.housing),
+                                      day = as.factor(day),
+                                      month = as.factor(month),
+                                      time.period = as.factor(time.period),
+                                      precinct = as.factor(precinct))
+
+
+sum(is.na(sqf.cpw))
+sqf.cpw <- na.omit(sqf.cpw)
 
 # Part A
 ## I
+
+# create training set
+train.cpw.2008 <- sqf.cpw %>% filter(year==2008)
 
 # standardize real-valued attributes for training set
 train.cpw.2008 <- train.cpw.2008 %>% mutate(suspect.age.s = standardize(suspect.age),
@@ -44,8 +60,14 @@ model <- glm(found.weapon ~ precinct + location.housing +
                suspect.height.s + suspect.weight.s + inside + radio.run + observation.period.s +
                day + month + time.period, data=train.cpw.2008, family = 'binomial')
 
+#sapply(train.cpw.2008, function(x) sum(is.na(x)))
+
 # examine model
 summary(model)
+
+# summary sorted by coefficients
+coef <- summary(model)[["coefficients"]]
+coef[order(coef[,1], decreasing = T),]
 
 ## II
 # 6th precinct, 30 years old, 6 feet, 165 lb, medium build, 10/4/2018 8pm, no weapon, suspected of criminal possession of weapon, suspect bulge, high incidence of weapn offenses, observed 10 min, no radio call
@@ -61,7 +83,8 @@ newdata.male <- data.frame(precinct='6', location.housing='transit',
              day = 'Thursday' , month = 'October', time.period = '6')
 
 prob.male <- predict (model, newdata = newdata.male, type="response")
-
+cat('the probability that he is carring a weapon is ', prob.male, "\n") 
+    
 # everything is same above other it's a female
 newdata.female <- data.frame(precinct='6', location.housing='transit', 
                            additional.report = FALSE, additional.investigation = FALSE, additional.proximity = FALSE,
@@ -75,11 +98,12 @@ newdata.female <- data.frame(precinct='6', location.housing='transit',
                            day = 'Thursday' , month = 'October', time.period = '6')
 
 prob.female <- predict (model, newdata = newdata.female, type="response")
+cat('the probability that she is carring a weapon is ', prob.female, "\n") 
 
 ## III
 
 # using data from 2009
-test.cpw.2009 <- sqf_08_16.data %>% filter(year==2009)
+test.cpw.2009 <- sqf.cpw %>% filter(year==2009)
 
 # standardize real-valued attributes for testing set
 test.cpw.2009 <- test.cpw.2009 %>% mutate(suspect.age.s = standardize(suspect.age),
@@ -99,8 +123,8 @@ cat('the auc score is ', 100*test.perf@y.values[[1]], "\n")
 set.seed(1)
 
 # create one set for found.weapon = TRUE and another set for found.weapon = FALSE
-test.cpw.2009.weapon <- sqf_08_16.data %>% filter(found.weapon==TRUE)
-test.cpw.2009.noweapon <- sqf_08_16.data %>% filter(found.weapon==FALSE)
+test.cpw.2009.weapon <- test.cpw.2009 %>% filter(found.weapon==TRUE)
+test.cpw.2009.noweapon <- test.cpw.2009 %>% filter(found.weapon==FALSE)
 
 # draw 10000 pairs of with found.weapon=TRUE and found.weapon=FALSE sample
 obs.boot.weapon <- sample(10000, 10000, replace=T)
@@ -121,5 +145,7 @@ pred.boot <- prediction(prob.boot, test.cpw.2009.boot$found.weapon)
 perf.boot <- performance(pred.boot,"auc")
 cat('the auc score is ', 100*perf.boot@y.values[[1]], "\n") 
 
+# Part B
 
+# Part C
 
