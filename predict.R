@@ -247,8 +247,8 @@ sqf.spcs <- na.omit(sqf.spcs)
 #sqf.spcs  <- sqf.spcs  %>% filter(complete.cases(sqf.spcs ))
 
 # create training and testing set
-train.sqf.spcs <- sqf.spcs %>% filter(year==2009|year==2010|year==2012)
-test.sqf.spcs <- sqf.spcs %>% filter(year==2013)
+train.sqf.spcs <- sqf.spcs %>% filter(year==2009|year==2010|year==2011)
+test.sqf.spcs <- sqf.spcs %>% filter(year==2012)
 
 # standardize real-valued attributes for training set
 train.sqf.spcs <- train.sqf.spcs %>% mutate(suspect.age.s = standardize(suspect.age),
@@ -264,29 +264,32 @@ test.sqf.spcs <- test.sqf.spcs %>% mutate(suspect.age.s = standardize(suspect.ag
 
 # train model with training set
 model.spcs <- glm(found.contraband ~ precinct + location.housing +
-              additional.report + additional.investigation + additional.proximity +
+              additional.report + additional.investigation + 
+  #            additional.proximity +
               additional.evasive + 
-  #            additional.associating + additional.direction + 
-  #            additional.highcrime + 
+  #            additional.associating + 
+              additional.direction + 
+              additional.highcrime + 
               additional.time + additional.sights + additional.other +
               stopped.bc.object + stopped.bc.desc + stopped.bc.casing + stopped.bc.lookout +
               stopped.bc.clothing + 
   #            stopped.bc.drugs + 
-              stopped.bc.furtive + stopped.bc.violent +
+              stopped.bc.furtive + 
+  #            stopped.bc.violent +
               stopped.bc.bulge + stopped.bc.other + 
   #            frisked.bc.suspected.crime + frisked.bc.weapons + frisked.bc.attire + frisked.bc.actual.crime + 
   #            frisked.bc.noncompliance + frisked.bc.threats + frisked.bc.prior + frisked.bc.furtive + frisked.bc.bulge +
               suspect.age.s + suspect.build + suspect.sex +
               suspect.height.s + suspect.weight.s + inside + radio.run +
-   #           observation.period.s +
+  #            observation.period.s +
               day + month + time.period, data=train.sqf.spcs, family = 'binomial')
 
 # examine model
 summary(model.spcs)
 
 # summary sorted by coefficients
-coef.spcs <- summary(model.spcs)[["coefficients"]]
-coef.spcs[order(coef.spcs[,1], decreasing = T),]
+#coef.spcs <- summary(model.spcs)[["coefficients"]]
+#coef.spcs[order(coef.spcs[,1], decreasing = T),]
 
 
 # generate predictions for testing set
@@ -342,3 +345,11 @@ p
 ggsave(plot=p, file='logistic_regression_calibration_plot.pdf', height=5, width=5)
 
 #### Logistic regression
+# Logistic regression is the classification method for building the prediction model above for predicting found.contraband variable. 
+# A subset of the original dataset is used by including stops related to criminal sale of controlled substance, criminal possesion of controlled substance, 
+# criminal sale of marihuana and criminal possession of marihuana only. Training data set includes data from 2009, 2010 and 2011 while 
+# testing set includes data from 2012. A different combinations of predictors have been tested and the AUC score between them are not that significant.
+# AUC scores are usually around 71 to 72. P values of the predictors were taken into consideration when deciding the different combinations of predictors.
+# According to the performance plot, this model requires around 26% to 27% percent of stops in order to reach a 50% recall for recovering contraband. 
+# It requires significantly more stops, roughly 35% more, in order to reach 75% recall. According to the calibration plot, the model perform relatively well 
+# with stops with probability below 30%, variances grow as the probability of the stops grows.
