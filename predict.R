@@ -174,6 +174,39 @@ perf.boot <- performance(pred.boot,"auc")
 cat('the auc score is ', 100*perf.boot@y.values[[1]], "\n") 
 
 # Part B
+# factor precincts based on the training dataset
+sqf.cpw$precinct <- factor(sqf.cpw$precinct, levels = levels(factor(train.cpw.2008$precinct)))
+
+# helper function to compute AUC for each year
+compute_auc <- function(selected_year) {
+  test <- sqf.cpw %>% 
+    filter(year == selected_year)
+  test <- test %>%
+    mutate(
+      suspect.age.s = standardize(suspect.age),
+      suspect.height.s = standardize(suspect.height),
+      suspect.weight.s = standardize(suspect.weight),
+      observation.period.s = standardize(observation.period)
+    )
+  
+  test$predicted.probability <- predict(model, newdata = test, type = 'response')
+  test <- test %>% filter(!is.na(predicted.probability))
+  
+  test.pred <- prediction(test$predicted.probability, test$found.weapon)
+  test.perf <- performance(test.pred, "auc")
+  auc <- 100*test.perf@y.values[[1]]
+  # auc
+  return(auc)
+}
+
+#compute auc for years 2009-2016
+year_range <- 2009:2016
+auc <- foreach(year = year_range, .combine='c') %dopar% { compute_auc(year) }
+# plot AUC change over time
+qplot(year_range, auc, geom='line', xlab='Year', ylab='AUC')
+# We observe AUC decrease oover the period from 2009 to 2016. 
+# It can be explained by noting that model was trained on data from 2009. 
+# Decrease of AUC over time indicates that model becomes less accurate.
 
 # Part C
 
