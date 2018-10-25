@@ -32,6 +32,7 @@ sqf.cpw <- sqf.cpw %>% mutate(suspect.race = as.factor(suspect.race),
                                       precinct = as.factor(precinct))
 
 
+# remove observations with missing values
 sum(is.na(sqf.cpw))
 sqf.cpw <- na.omit(sqf.cpw)
 
@@ -60,14 +61,41 @@ model <- glm(found.weapon ~ precinct + location.housing +
                suspect.height.s + suspect.weight.s + inside + radio.run + observation.period.s +
                day + month + time.period, data=train.cpw.2008, family = 'binomial')
 
-#sapply(train.cpw.2008, function(x) sum(is.na(x)))
-
 # examine model
 summary(model)
 
 # summary sorted by coefficients
 coef <- summary(model)[["coefficients"]]
 coef[order(coef[,1], decreasing = T),]
+
+#### Ten largest coefficients
+#location.housingtransit       2.583924960 0.09436900  27.38107881 4.608162e-165***
+#stopped.bc.objectTRUE         2.467923044 0.05186882  47.58008680  0.000000e+00
+#precinct111                   1.537353706 0.41886815   3.67025688  2.423068e-04
+#precinct25                    1.066354499 0.27549628   3.87066757  1.085377e-04
+#precinct9                     0.884402204 0.30406112   2.90863296  3.630128e-03
+#precinct17                    0.860593716 0.32714727   2.63060035  8.523420e-03
+#location.housingneither       0.827481289 0.06989773  11.83845710  2.469542e-32
+#precinct112                   0.803853527 0.38456778   2.09027787  3.659285e-02
+#precinct13                    0.736239256 0.27881941   2.64055953  8.276925e-03
+#stopped.bc.otherTRUE          0.730949268
+
+#### Ten smallest coefficients
+#stopped.bc.lookoutTRUE       -0.682690331 0.09285592  -7.35214615  1.950494e-13***
+#precinct23                   -0.685959663 0.29685672  -2.31074323  2.084704e-02
+#precinct115                  -0.688684014 0.30089746  -2.28876649  2.209292e-02
+#precinct75                   -0.717227072 0.27446338  -2.61319766  8.969941e-03
+#precinct41                   -0.759801221 0.31304716  -2.42711428  1.521946e-02
+#precinct52                   -0.912759655 0.28828507  -3.16617042  1.544603e-03
+#precinct101                  -0.933521746 0.30650045  -3.04574351  2.321057e-03
+#precinct24                   -0.999906774 0.36673078  -2.72654173  6.400186e-03
+#precinct50                   -1.092400191 0.45369888  -2.40776480  1.605052e-02
+#precinct44                   -1.152967875 0.29176460  -3.95170578  7.759611e-05
+
+#### About the coefficient
+# The coefficient of location.housingtransit is 2.58 with p value < 0.05. It indiciates it is statistically significant. 
+# According to the coefficients, it indicates when comparing stop made in transit to stop made in housing, the odds of founding weapon increase by a factor of 2.58. 
+
 
 ## II
 # 6th precinct, 30 years old, 6 feet, 165 lb, medium build, 10/4/2018 8pm, no weapon, suspected of criminal possession of weapon, suspect bulge, high incidence of weapn offenses, observed 10 min, no radio call
@@ -149,3 +177,135 @@ cat('the auc score is ', 100*perf.boot@y.values[[1]], "\n")
 
 # Part C
 
+# prediction for found.contraband with logistic regression
+
+# restrict to sale/poccession of marihuana and sale/possession of controlled substance
+sqf.spcs <- sqf_08_16.data %>% filter(suspected.crime=='criminal sale of controlled substance' | suspected.crime=='criminal possesion of controlled substance' | suspected.crime=='criminal sale of marihuana' | suspected.crime=='criminal possession of marihuana') 
+
+sqf.spcs <- sqf.spcs %>%
+  select(id, year, found.contraband, found.weapon, arrested, searched, suspect.race, suspect.age,
+         suspect.build, suspect.sex, suspect.height, suspect.weight,
+         stopped.bc.desc, stopped.bc.violent, stopped.bc.other, stopped.bc.object, 
+         stopped.bc.casing, stopped.bc.lookout, stopped.bc.drugs, stopped.bc.clothing, 
+         stopped.bc.furtive, stopped.bc.bulge, 
+         frisked.bc.suspected.crime, frisked.bc.weapons, frisked.bc.attire, frisked.bc.actual.crime, 
+         frisked.bc.noncompliance, frisked.bc.threats, frisked.bc.prior, frisked.bc.furtive, frisked.bc.bulge,
+         precinct, inside, location.housing, observation.period, officer.uniform,
+         additional.report, additional.investigation, additional.proximity, additional.evasive,
+         additional.associating, additional.direction, additional.highcrime, additional.time, 
+         additional.sights, additional.other, radio.run, day, month, time.period)
+
+
+# Convert variable types as necessary
+sqf.spcs <- sqf.spcs %>% mutate(suspect.race = as.factor(suspect.race), 
+                              suspect.build = as.factor(suspect.build),
+                              suspect.sex = as.factor(suspect.sex),
+                              location.housing = as.factor(location.housing),
+                              day = as.factor(day),
+                              month = as.factor(month),
+                              time.period = as.factor(time.period),
+                              precinct = as.factor(precinct))
+
+
+# remove observations with missing values
+sum(is.na(sqf.spcs))
+sqf.spcs <- na.omit(sqf.spcs)
+
+#sqf.spcs  <- sqf.spcs  %>% filter(complete.cases(sqf.spcs ))
+
+# create training and testing set
+train.sqf.spcs <- sqf.spcs %>% filter(year==2009|year==2010|year==2012)
+test.sqf.spcs <- sqf.spcs %>% filter(year==2013)
+
+# standardize real-valued attributes for training set
+train.sqf.spcs <- train.sqf.spcs %>% mutate(suspect.age.s = standardize(suspect.age),
+                                            suspect.height.s = standardize(suspect.height),
+                                            suspect.weight.s = standardize(suspect.weight),
+                                            observation.period.s = standardize(observation.period))
+
+# standardize real-valued attributes for training set
+test.sqf.spcs <- test.sqf.spcs %>% mutate(suspect.age.s = standardize(suspect.age),
+                                            suspect.height.s = standardize(suspect.height),
+                                            suspect.weight.s = standardize(suspect.weight),
+                                            observation.period.s = standardize(observation.period))
+
+# train model with training set
+model.spcs <- glm(found.contraband ~ precinct + location.housing +
+              additional.report + additional.investigation + additional.proximity +
+              additional.evasive + 
+  #            additional.associating + additional.direction + 
+  #            additional.highcrime + 
+              additional.time + additional.sights + additional.other +
+              stopped.bc.object + stopped.bc.desc + stopped.bc.casing + stopped.bc.lookout +
+              stopped.bc.clothing + 
+  #            stopped.bc.drugs + 
+              stopped.bc.furtive + stopped.bc.violent +
+              stopped.bc.bulge + stopped.bc.other + 
+  #            frisked.bc.suspected.crime + frisked.bc.weapons + frisked.bc.attire + frisked.bc.actual.crime + 
+  #            frisked.bc.noncompliance + frisked.bc.threats + frisked.bc.prior + frisked.bc.furtive + frisked.bc.bulge +
+              suspect.age.s + suspect.build + suspect.sex +
+              suspect.height.s + suspect.weight.s + inside + radio.run +
+   #           observation.period.s +
+              day + month + time.period, data=train.sqf.spcs, family = 'binomial')
+
+# examine model
+summary(model.spcs)
+
+# summary sorted by coefficients
+coef.spcs <- summary(model.spcs)[["coefficients"]]
+coef.spcs[order(coef.spcs[,1], decreasing = T),]
+
+
+# generate predictions for testing set
+test.sqf.spcs <- test.sqf.spcs %>% filter(precinct!="121")
+test.sqf.spcs$predicted.probability <- predict(model.spcs, newdata = test.sqf.spcs, type='response') 
+
+test.sqf.spcs %>% arrange(desc(predicted.probability)) %>% select(year, found.contraband,
+                                                         predicted.probability)
+test.sqf.spcs %>% arrange(predicted.probability) %>% select(year, found.contraband,
+                                                                  predicted.probability)
+
+
+# compute AUC using ROCR package
+test.pred.spcs <- prediction(test.sqf.spcs$predicted.probability, test.sqf.spcs$found.contraband)
+test.perf.spcs <- performance(test.pred.spcs, "auc")
+cat('the auc score is ', 100*test.perf.spcs@y.values[[1]], "\n") 
+
+
+# create performance plot
+
+plot.data <- test.sqf.spcs %>% arrange(desc(predicted.probability)) %>% 
+             mutate(numstops = row_number(), percent.recall = cumsum(found.contraband)/sum(found.contraband),
+             stops = numstops/n()) %>% select(stops, percent.recall)
+
+
+# create and save plot
+theme_set(theme_bw())
+p <- ggplot(data=plot.data, aes(x=stops, y=percent.recall)) 
+p <- p + geom_line()
+p <- p + scale_x_log10('\nPercent of stops', limits=c(0.003, 1), breaks=c(.003,.01,.03,.1,.3,1), 
+                       labels=c('0.3%','1%','3%','10%','30%','100%'))
+p <- p + scale_y_continuous("Percent of contraband found", limits=c(0, 1), labels=scales::percent)
+p
+ggsave(plot=p, file='logistic_regression_performance_plot.pdf', height=5, width=5)
+
+
+# create calibration plot
+plot.data <- test.sqf.spcs %>% mutate(calibration = round(100*predicted.probability)) %>% 
+  group_by(calibration) %>% summarize(model.estimate = mean(predicted.probability),
+                                      numstops = n(),
+                                      empirical.estimate = mean(found.contraband))
+
+# create and save plot
+p <- ggplot(data = plot.data, aes(y=empirical.estimate, x=model.estimate))
+p <- p + geom_point(alpha=0.5, aes(size=numstops))
+p <- p + scale_size_area(guide='none', max_size=15)
+p <- p + geom_abline(intercept=0, slope=1, linetype="dashed")
+p <- p + scale_y_log10('Empirical probability \n', limits=c(.001,1), breaks=c(.001,.003,.01,.03,.1,.3,1), 
+                       labels=c('0.1%','0.3%','1%','3%','10%','30%','100%'))
+p <- p + scale_x_log10('\nModel estimated probability', limits=c(.001,1), breaks=c(.001,.003,.01,.03,.1,.3,1), 
+                       labels=c('0.1%','0.3%','1%','3%','10%','30%','100%'))
+p
+ggsave(plot=p, file='logistic_regression_calibration_plot.pdf', height=5, width=5)
+
+#### Logistic regression
